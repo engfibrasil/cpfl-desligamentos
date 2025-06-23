@@ -2,6 +2,9 @@ import requests
 import datetime
 import csv
 import time
+import smtplib
+from email.message import EmailMessage
+import mimetypes
 
 def obter_periodo_semana():
     hoje = datetime.date.today()
@@ -9,6 +12,49 @@ def obter_periodo_semana():
     fim = inicio + datetime.timedelta(days=6)
     return inicio, fim
 
+def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
+    remetente = "eng.fibrasil@zohomail.com"
+    senha = "F1br@$1L"
+    destinatario = "marcos.udinal@gmail.com"
+    copia = "marcos.oliveira@fibrasil.com.br"
+
+    assunto = f"📄 Desligamentos Programados CPFL – Semana {data_inicio} a {data_fim}"
+    corpo = f"""
+    Olá Marcos,
+
+    Segue em anexo o arquivo com os desligamentos programados da CPFL
+    referentes à semana de {data_inicio} a {data_fim}.
+
+    Qualquer dúvida estou à disposição.
+
+    Atenciosamente,
+    Script Automatizado
+    """
+
+    msg = EmailMessage()
+    msg["Subject"] = assunto
+    msg["From"] = remetente
+    msg["To"] = destinatario
+    msg["Cc"] = copia
+    msg.set_content(corpo)
+
+    # Anexar CSV
+    with open(nome_arquivo, "rb") as f:
+        conteudo = f.read()
+        tipo, _ = mimetypes.guess_type(nome_arquivo)
+        tipo_principal, subtipo = tipo.split("/") if tipo else ("application", "octet-stream")
+        msg.add_attachment(conteudo, maintype=tipo_principal, subtype=subtipo, filename=nome_arquivo)
+
+    try:
+        with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
+            smtp.starttls()
+            smtp.login(remetente, senha)
+            smtp.send_message(msg)
+            print("📧 E-mail enviado com sucesso!")
+    except Exception as e:
+        print(f"❌ Erro ao enviar e-mail: {e}")
+
+# Municípios e seus IDs
 municipios = {
     "Lajeado": 761,
     "Canela": 677,
@@ -41,6 +87,7 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
+# Período da semana atual
 data_inicio_dt, data_fim_dt = obter_periodo_semana()
 data_inicio = data_inicio_dt.strftime("%d/%m/%Y")
 data_fim = data_fim_dt.strftime("%d/%m/%Y")
@@ -102,7 +149,7 @@ for nome, id_municipio in municipios.items():
     except Exception as e:
         print(f"  ⚠️ Erro ao consultar {nome}: {e}")
 
-# Exportar CSV com nome personalizado e encoding UTF-8 (corrigindo caracteres)
+# Exportar CSV
 if resultados:
     with open(nome_arquivo, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=resultados[0].keys())
@@ -111,5 +158,9 @@ if resultados:
 
     print(f"\n✅ Consulta finalizada! Total de registros salvos: {len(resultados)}")
     print(f"📄 Arquivo gerado: {nome_arquivo}")
+
+    # Enviar por e-mail
+    enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim)
+
 else:
     print("\n⚠️ Nenhum desligamento encontrado para os municípios informados.")
