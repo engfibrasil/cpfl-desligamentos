@@ -1,0 +1,30 @@
+name: CPFL Desligamentos Semanais
+
+on:
+  schedule:
+    - cron: '0 11 * * 1'  # roda toda segunda às 08h BRT (~11h UTC)
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Rodar script CPFL
+        run: python cpfl_desligamentos.py
+
+      - name: Salvar arquivo CSV
+        uses: actions/upload-artifact@v3
+        with:
+          name: desligamentos_cpfl
+          path: "*.csv"
