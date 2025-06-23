@@ -15,12 +15,12 @@ def obter_periodo_semana():
 def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     remetente = "eng.fibrasil@zohomail.com"
     senha = "F1br@$1L"
-    destinatario = "marcos.udinal@gmail.com"
+    destinatario = "robson.santos@fibrasil.com.br"
     copia = "marcos.oliveira@fibrasil.com.br"
 
     assunto = f"📄 Desligamentos Programados CPFL – Semana {data_inicio} a {data_fim}"
     corpo = f"""
-    Olá Marcos,
+    Senhores,
 
     Segue em anexo o arquivo com os desligamentos programados da CPFL
     referentes à semana de {data_inicio} a {data_fim}.
@@ -28,7 +28,7 @@ def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     Qualquer dúvida estou à disposição.
 
     Atenciosamente,
-    Script Automatizado
+    
     """
 
     msg = EmailMessage()
