@@ -1,16 +1,23 @@
-import requests
-import datetime
 import csv
-import time
+import unicodedata
+from datetime import datetime as dt
 import smtplib
 from email.message import EmailMessage
 import mimetypes
 
-def obter_periodo_semana():
-    hoje = datetime.date.today()
-    inicio = hoje - datetime.timedelta(days=hoje.weekday())
-    fim = inicio + datetime.timedelta(days=6)
-    return inicio, fim
+def remover_acentos(txt):
+    if isinstance(txt, str):
+        return unicodedata.normalize('NFKD', txt).encode('ASCII', 'ignore').decode('utf-8')
+    return txt
+
+def calcular_diferenca_horas(hora_inicio, hora_fim):
+    try:
+        inicio = dt.strptime(hora_inicio, "%H:%M")
+        fim = dt.strptime(hora_fim, "%H:%M")
+        diferenca = (fim - inicio).total_seconds() / 3600
+        return diferenca
+    except Exception:
+        return 0
 
 def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     remetente = "eng.fibrasil@zohomail.com"
@@ -28,7 +35,6 @@ def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     Qualquer dúvida estou à disposição.
 
     Atenciosamente,
-    
     """
 
     msg = EmailMessage()
@@ -38,7 +44,6 @@ def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     msg["Cc"] = copia
     msg.set_content(corpo)
 
-    # Anexar CSV
     with open(nome_arquivo, "rb") as f:
         conteudo = f.read()
         tipo, _ = mimetypes.guess_type(nome_arquivo)
@@ -54,113 +59,38 @@ def enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim):
     except Exception as e:
         print(f"❌ Erro ao enviar e-mail: {e}")
 
-# Municípios e seus IDs
-municipios = {
-"Lajeado":761,
-"Canela":698,
-"Igrejinha":770,
-"Alegrete":894,
-"Estrela":732,
-"Lagoa Vermelha":836,
-"Palmeira das Missões":1030,
-"Santana do Livramento":889,
-"Sarandi":1027,
-"Uruguaiana":893,
-"Vacaria":717,
-"Venancio Aires":795,
-"Cachoeira do Sul":812,
-"Três de Maio":988,
-"Santo Angelo":1070,
-"Santa Rosa":984,
-"Nova Petropolis":706,
-"Taquara":767,
-"Ivoti":781,
-"Carlos Barbosa":729,
-"Dois Irmãos":778,
-"Erechim":869,
-"Flores da Cunha":708,
-"São Marcos":711,
-"Veranópolis":834
-}
+# Leitura e filtro
+entrada = "desligamentos_cpfl_30-06-2025_a_06-07-2025.csv"
+saida = "desligamentos_cpfl_filtrado_sem_acentos.csv"
+resultados_filtrados = []
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+with open(entrada, newline="", encoding="utf-8") as f:
+    leitor = csv.DictReader(f)
+    for linha in leitor:
+        linha_sem_acentos = {k: remover_acentos(v) for k, v in linha.items()}
+        manutencao = linha_sem_acentos.get("Manutencao", "")
 
-# Período da semana atual
-data_inicio_dt, data_fim_dt = obter_periodo_semana()
-data_inicio = data_inicio_dt.strftime("%d/%m/%Y")
-data_fim = data_fim_dt.strftime("%d/%m/%Y")
-nome_arquivo = f"desligamentos_cpfl_{data_inicio_dt.strftime('%d-%m-%Y')}_a_{data_fim_dt.strftime('%d-%m-%Y')}.csv"
-
-resultados = []
-
-print(f"Iniciando consulta de {len(municipios)} municípios entre {data_inicio} e {data_fim}...\n")
-
-for nome, id_municipio in municipios.items():
-    print(f"Consultando {nome} (ID {id_municipio})...")
-
-    url = (
-        f"https://spir.cpfl.com.br/api/ConsultaDesligamentoProgramado/Pesquisar"
-        f"?PeriodoDesligamentoInicial={data_inicio}"
-        f"&PeriodoDesligamentoFinal={data_fim}"
-        f"&IdMunicipio={id_municipio}"
-        f"&NomeBairro=&NomeRua="
-    )
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        data = response.json()
-
-        if not data.get("Data"):
-            print(f"  👉 Nenhum desligamento encontrado.")
-            continue
-
-        for cidade in data["Data"]:
-            nome_municipio = cidade["NomeMunicipio"]
-            for dia in cidade["Datas"]:
-                data_municipio = dia["Data"][:10]
-                for documento in dia["Documentos"]:
-                    descricao = documento.get("DescricaoDocumento")
-                    estado = documento.get("Estado")
-                    necessidade = documento.get("NecessidadeDocumento")
-                    inicio_execucao = documento.get("PeriodoExecucaoInicial")[11:16]
-                    fim_execucao = documento.get("PeriodoExecucaoPeriodoFinal")[11:16]
-
-                    for bairro in documento.get("Bairros", []):
-                        nome_bairro = bairro["NomeBairro"]
-                        for rua in bairro.get("Ruas", []):
-                            nome_rua = rua["NomeRua"]
-
-                            resultados.append({
-                                "Cidade": nome_municipio,
-                                "Data": data_municipio,
-                                "Início": inicio_execucao,
-                                "Fim": fim_execucao,
-                                "Execução": estado,
-                                "Manutenção": necessidade,
-                                "Descrição": descricao,
-                                "Bairro": nome_bairro,
-                                "Rua": nome_rua
-                            })
-
-        time.sleep(0.5)
-
-    except Exception as e:
-        print(f"  ⚠️ Erro ao consultar {nome}: {e}")
+        if manutencao == "Obras":
+            resultados_filtrados.append(linha_sem_acentos)
+        elif manutencao == "Manutencao":
+            inicio = linha_sem_acentos.get("Inicio", "00:00")
+            fim = linha_sem_acentos.get("Fim", "00:00")
+            if calcular_diferenca_horas(inicio, fim) > 1:
+                resultados_filtrados.append(linha_sem_acentos)
 
 # Exportar CSV
-if resultados:
-    with open(nome_arquivo, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=resultados[0].keys())
-        writer.writeheader()
-        writer.writerows(resultados)
+if resultados_filtrados:
+    with open(saida, "w", newline="", encoding="utf-8") as f:
+        escritor = csv.DictWriter(f, fieldnames=resultados_filtrados[0].keys())
+        escritor.writeheader()
+        escritor.writerows(resultados_filtrados)
 
-    print(f"\n✅ Consulta finalizada! Total de registros salvos: {len(resultados)}")
-    print(f"📄 Arquivo gerado: {nome_arquivo}")
-
+    print(f"✅ Arquivo filtrado salvo como: {saida} com {len(resultados_filtrados)} registros")
+    
     # Enviar por e-mail
-    enviar_email_com_anexo(nome_arquivo, data_inicio, data_fim)
-
+    hoje = dt.today().date()
+    inicio_semana = hoje - datetime.timedelta(days=hoje.weekday())
+    fim_semana = inicio_semana + datetime.timedelta(days=6)
+    enviar_email_com_anexo(saida, inicio_semana.strftime("%d/%m/%Y"), fim_semana.strftime("%d/%m/%Y"))
 else:
-    print("\n⚠️ Nenhum desligamento encontrado para os municípios informados.")
+    print("⚠️ Nenhum registro encontrado após os filtros.")
