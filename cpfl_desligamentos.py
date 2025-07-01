@@ -12,8 +12,8 @@ from datetime import datetime as dt
 # === CONFIGURAÇÕES ===
 REMETENTE = "eng.fibrasil@zohomail.com"
 SENHA = "F1br@$1L"
-DESTINATARIO = "nathalia.martines@fibrasil.com.br"
-COPIA = "marcos.oliveira@fibrasil.com.br, robson.santos@fibrasil.com.br, fabiano.cezar@fibrasil.com.br"
+DESTINATARIO = "robson.santos@fibrasil.com.br"
+COPIA = "marcos.oliveira@fibrasil.com.br, nathalia.martines@fibrasil.com.br"
 CHAVE_GEOCODIFICACAO = "5b3ce3597851110001cf6248f0b838209a014d1489661eb1afacd92a"
 
 municipios = {
@@ -153,7 +153,7 @@ for nome, id_municipio in municipios.items():
                                 nome_rua = remover_acentos(rua["NomeRua"])
                                 endereco_completo = f"{nome_rua}, {nome_bairro}, {nome_municipio}"
                                 lat, lon = consultar_lat_lon(endereco_completo, CHAVE_GEOCODIFICACAO)
-                                time.sleep(1)  # Evitar excesso na API
+                                time.sleep(1)  # evitar excesso de requisição
 
                                 resultados.append({
                                     "Cidade": remover_acentos(nome_municipio),
@@ -172,10 +172,10 @@ for nome, id_municipio in municipios.items():
     except Exception as e:
         print(f"  ⚠️ Erro: {e}")
 
-# Gerar CSV em memória
+# Gerar CSV em memória com separador ;
 if resultados:
     csv_buffer = io.StringIO()
-    writer = csv.DictWriter(csv_buffer, fieldnames=resultados[0].keys())
+    writer = csv.DictWriter(csv_buffer, fieldnames=resultados[0].keys(), delimiter=';')
     writer.writeheader()
     writer.writerows(resultados)
     csv_conteudo = csv_buffer.getvalue()
