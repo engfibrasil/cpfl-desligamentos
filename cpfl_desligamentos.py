@@ -13,7 +13,7 @@ from datetime import datetime as dt
 REMETENTE = "eng.fibrasil@zohomail.com"
 SENHA = "F1br@$1L"
 DESTINATARIO = "robson.santos@fibrasil.com.br"
-COPIA = "marcos.oliveira@fibrasil.com.br, nathalia.martines@fibrasil.com.br"
+COPIA = "marcos.oliveira@fibrasil.com.br, nathalia.martines@fibrasil.com.br, fabiano.cezar@fibrasil.com.br, danielle.rodrigues@fibrasil.com.br"
 CHAVE_GEOCODIFICACAO = "5b3ce3597851110001cf6248f0b838209a014d1489661eb1afacd92a"
 
 municipios = {
@@ -183,3 +183,4 @@ if resultados:
     enviar_email_com_anexo_csv_em_memoria(csv_conteudo, nome_arquivo, data_inicio, data_fim)
 else:
     print("⚠️ Nenhum registro encontrado.")
+
